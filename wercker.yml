@@ -10,8 +10,13 @@ push:
   steps:
     # Push to public docker repo Container Registry (CR)
     - internal/docker-push:
-        tag: latest
-        repository: $CR_REPOSITORY
+        username: $DOCKER_USERNAME
+        password: $OCI_AUTH_TOKEN
+        repository: $DOCKER_REGISTRY/$DOCKER_REPO
+        registry: https://$DOCKER_REGISTRY/v2
+        tag: $WERCKER_GIT_BRANCH-$WERCKER_GIT_COMMIT
+        working-dir: /pipeline/source
+        ports: 8080
         cmd: java -jar  /pipeline/source/target/loan-0.1.0.war
 
 deploy-to-cluster:
@@ -27,29 +32,3 @@ deploy-to-cluster:
         token: $KUBERNETES_TOKEN
         insecure-skip-tls-verify: true
         command: create -f $WERCKER_ROOT/creditscore-deployment.yaml
-
-testapp:
-  steps:
-    - script:
-        name: Run and Test microservice
-        code: | 
-              java -jar  /pipeline/source/target/loan-0.1.0.war &
-              sleep 10
-              CREDITSCORE_URL=http://localhost:8080/creditscore
-              echo 'Microservice URL=' $CREDITSCORE_URL
-              if curl -X POST -H "Content-Type: application/json" -X POST -d '{"firstname":"John","lastname":"Doe","dateofbirth":"01/01/2015","ssn":"111223333"}' $CREDITSCORE_URL | grep "firstname"
-              then
-                  # if the keyword is in the conent
-                  echo "Test passed"
-              else
-                  echo "Test failed"
-                  exit -1
-              fi
-
-
-restart:
-  steps:
-    # Restart Docker on OCCS using webhook
-    - script:
-        name: curl POST
-        code: curl -k -X POST $DEPLOYMENT_WEBHOOK
