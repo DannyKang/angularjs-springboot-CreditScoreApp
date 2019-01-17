@@ -6,7 +6,7 @@ build:
         name: Maven install
         code: mvn install
 
-push:
+push-release:
   steps:
     # Push to public docker repo Container Registry (CR)
     - internal/docker-push:
